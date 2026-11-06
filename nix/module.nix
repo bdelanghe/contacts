@@ -53,7 +53,10 @@ let
     hosts = 127.0.0.1:${toString port}
 
     [auth]
-    type = none
+    # remoteUser: the user is the X-Remote-User header the reverse proxy in front sets from the tailnet identity (bdelanghe/darwin
+    # proxy.nix maps Tailscale-User-Login to it), so the web page signs in by itself. Still loopback only: a process on this Mac can
+    # send the header, which is no more than `none` already allows it.
+    type = ${if cfg.remoteUser then "http_x_remote_user" else "none"}
 
     [storage]
     # PLAIN FILES, not a database. This is the whole point: the storage layer
@@ -74,6 +77,11 @@ in
       default = "${config.home.homeDirectory}/.local/share/contacts";
       defaultText = lib.literalExpression ''"''${config.home.homeDirectory}/.local/share/contacts"'';
       description = "The directory of .vcf files (RFC 6350 vdir) Radicale stores into and ingesters read.";
+    };
+    remoteUser = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Take the user from the X-Remote-User header a reverse proxy sets (Radicale's http_x_remote_user), so the web page signs in without a form. Only behind a proxy that sets or strips that header on every request.";
     };
     port = lib.mkOption { type = lib.types.port; default = 5232; description = "Loopback port Radicale listens on (127.0.0.1 only; no auth, see the module header)."; };
   };
